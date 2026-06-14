@@ -9,3 +9,4 @@ CREATE TABLE tasks (
     deadline DATE,
     priority VARCHAR(50)
 );
+SHOW TABLES;

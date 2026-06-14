@@ -1,16 +1,14 @@
 const db = require("../db");
-const { spawn } = require("child_process");
-const path = require("path");
 
-/* -------------------------
-   ADD TASK (CREATE)
---------------------------*/
+// CREATE TASK
 const addTask = (req, res) => {
     const { title, description, deadline } = req.body;
 
-    // basic validation
     if (!title || !description || !deadline) {
-        return res.status(400).send("Missing required fields");
+        return res.status(400).json({
+            success: false,
+            message: "All fields are required"
+        });
     }
 
     const sql = `
@@ -18,57 +16,99 @@ const addTask = (req, res) => {
         VALUES (?, ?, ?, ?)
     `;
 
-    db.query(sql, [title, description, deadline, "Pending"], (err, result) => {
-        if (err) {
-            console.error("DB Error (addTask):", err);
-            return res.status(500).send("Database error while adding task");
-        }
+    db.query(
+        sql,
+        [title, description, deadline, "Pending"],
+        (err, result) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).json({
+                    success: false,
+                    message: "Database error"
+                });
+            }
 
-        res.send("Task added successfully ✅");
-    });
+            res.status(201).json({
+                success: true,
+                message: "Task added successfully"
+            });
+        }
+    );
 };
 
-/* -------------------------
-   GET ALL TASKS (READ)
---------------------------*/
+// READ TASKS
 const getTasks = (req, res) => {
-    const sql = "SELECT * FROM tasks";
-
-    db.query(sql, (err, results) => {
+    db.query("SELECT * FROM tasks ORDER BY id DESC", (err, results) => {
         if (err) {
-            console.error("DB Error (getTasks):", err);
-            return res.status(500).send("Database error while fetching tasks");
+            console.error(err);
+            return res.status(500).json({
+                success: false,
+                message: "Database error"
+            });
         }
 
         res.json(results);
     });
 };
 
-/* -------------------------
-   DELETE TASK (DELETE)
-   (for your frontend button)
---------------------------*/
+// UPDATE TASK
+const updateTask = (req, res) => {
+    const { id } = req.params;
+    const { title, description, deadline } = req.body;
+
+    const sql = `
+        UPDATE tasks
+        SET title = ?, description = ?, deadline = ?
+        WHERE id = ?
+    `;
+
+    db.query(
+        sql,
+        [title, description, deadline, id],
+        (err, result) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).json({
+                    success: false,
+                    message: "Database error"
+                });
+            }
+
+            res.json({
+                success: true,
+                message: "Task updated successfully"
+            });
+        }
+    );
+};
+
+// DELETE TASK
 const deleteTask = (req, res) => {
     const { id } = req.params;
 
-    const sql = "DELETE FROM tasks WHERE id = ?";
+    db.query(
+        "DELETE FROM tasks WHERE id = ?",
+        [id],
+        (err, result) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).json({
+                    success: false,
+                    message: "Database error"
+                });
+            }
 
-    db.query(sql, [id], (err, result) => {
-        if (err) {
-            console.error("DB Error (deleteTask):", err);
-            return res.status(500).send("Database error while deleting task");
+            res.json({
+                success: true,
+                message: "Task deleted successfully"
+            });
         }
-
-        if (result.affectedRows === 0) {
-            return res.status(404).send("Task not found");
-        }
-
-        res.send("Task deleted successfully ✅");
-    });
+    );
 };
 
 module.exports = {
     addTask,
     getTasks,
+    updateTask,
     deleteTask
 };
